@@ -17,9 +17,10 @@ class TypeSaber {
         this.lanes = [-6, -2, 2, 6]; // 4 lanes for cubes to travel in
         
         // Hit zone settings
-        this.hitZoneStart = 6; // Z position where hit zone starts
-        this.hitZoneEnd = 10; // Z position where hit zone ends
-        this.hitZoneDepth = this.hitZoneEnd - this.hitZoneStart;
+        this.hitZoneCenter = -2; // Z position of hit circles (further into the field)
+        this.hitZoneRadius = 1.8; // Radius of hit circles
+        this.perfectZoneRadius = 0.8; // Radius of perfect zone
+        this.hitZoneTolerance = 4; // Larger tolerance so cubes turn red earlier
         
         // Letter bank for the game (home row keys)
         this.letterBank = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
@@ -159,81 +160,86 @@ class TypeSaber {
     }
 
     createHitZone() {
-        // Create bright hit zone on the ground
-        const hitZoneGeometry = new THREE.PlaneGeometry(20, this.hitZoneDepth);
-        const hitZoneMaterial = new THREE.MeshPhongMaterial({
-            color: 0x00ff88,
-            emissive: 0x004422,
-            transparent: true,
-            opacity: 0.6,
-            side: THREE.DoubleSide
-        });
-
-        const hitZoneFloor = new THREE.Mesh(hitZoneGeometry, hitZoneMaterial);
-        hitZoneFloor.position.set(0, -4.9, (this.hitZoneStart + this.hitZoneEnd) / 2);
-        hitZoneFloor.rotateX(-Math.PI / 2);
-        this.scene.add(hitZoneFloor);
-
-        // Create "PERFECT" zone in the center (smaller, brighter)
-        const perfectZoneGeometry = new THREE.PlaneGeometry(20, this.hitZoneDepth * 0.4);
-        const perfectZoneMaterial = new THREE.MeshPhongMaterial({
-            color: 0xffff00,
-            emissive: 0x444400,
-            transparent: true,
-            opacity: 0.8,
-            side: THREE.DoubleSide
-        });
-
-        const perfectZoneFloor = new THREE.Mesh(perfectZoneGeometry, perfectZoneMaterial);
-        perfectZoneFloor.position.set(0, -4.8, (this.hitZoneStart + this.hitZoneEnd) / 2);
-        perfectZoneFloor.rotateX(-Math.PI / 2);
-        this.scene.add(perfectZoneFloor);
-
-        // Add glowing border lines for the hit zone
-        const borderMaterial = new THREE.MeshPhongMaterial({
-            color: 0x00ffff,
-            emissive: 0x008888,
-            transparent: true,
-            opacity: 0.9
-        });
-
-        // Front border line
-        const frontBorderGeometry = new THREE.BoxGeometry(20, 0.2, 0.3);
-        const frontBorder = new THREE.Mesh(frontBorderGeometry, borderMaterial);
-        frontBorder.position.set(0, -4.5, this.hitZoneStart);
-        this.scene.add(frontBorder);
-
-        // Back border line
-        const backBorder = new THREE.Mesh(frontBorderGeometry, borderMaterial);
-        backBorder.position.set(0, -4.5, this.hitZoneEnd);
-        this.scene.add(backBorder);
-
-        // Side border lines
-        const sideBorderGeometry = new THREE.BoxGeometry(0.3, 0.2, this.hitZoneDepth);
-        const leftBorder = new THREE.Mesh(sideBorderGeometry, borderMaterial);
-        leftBorder.position.set(-10, -4.5, (this.hitZoneStart + this.hitZoneEnd) / 2);
-        this.scene.add(leftBorder);
-
-        const rightBorder = new THREE.Mesh(sideBorderGeometry, borderMaterial);
-        rightBorder.position.set(10, -4.5, (this.hitZoneStart + this.hitZoneEnd) / 2);
-        this.scene.add(rightBorder);
-
-        // Store references for potential animation
         this.hitZoneElements = {
-            floor: hitZoneFloor,
-            perfectZone: perfectZoneFloor,
-            borders: [frontBorder, backBorder, leftBorder, rightBorder]
+            circles: [],
+            perfectCircles: []
         };
+
+        // Create circular hit zones for each lane on the ground
+        this.lanes.forEach((laneX, index) => {
+            // Main hit zone circle (larger, bright red)
+            const hitCircleGeometry = new THREE.CircleGeometry(1.8, 32);
+            const hitCircleMaterial = new THREE.MeshPhongMaterial({
+                color: 0xff0000,
+                emissive: 0x660000,
+                transparent: true,
+                opacity: 0.9,
+                side: THREE.DoubleSide
+            });
+
+            const hitCircle = new THREE.Mesh(hitCircleGeometry, hitCircleMaterial);
+            hitCircle.position.set(laneX, -4.9, this.hitZoneCenter); // Position at hit zone
+            hitCircle.rotateX(-Math.PI / 2);
+            this.scene.add(hitCircle);
+            this.hitZoneElements.circles.push(hitCircle);
+
+            // Perfect zone circle (smaller, bright yellow)
+            const perfectCircleGeometry = new THREE.CircleGeometry(0.8, 32);
+            const perfectCircleMaterial = new THREE.MeshPhongMaterial({
+                color: 0xffff00,
+                emissive: 0x888800,
+                transparent: true,
+                opacity: 1.0,
+                side: THREE.DoubleSide
+            });
+
+            const perfectCircle = new THREE.Mesh(perfectCircleGeometry, perfectCircleMaterial);
+            perfectCircle.position.set(laneX, -4.8, this.hitZoneCenter); // Slightly above hit circle
+            perfectCircle.rotateX(-Math.PI / 2);
+            this.scene.add(perfectCircle);
+            this.hitZoneElements.perfectCircles.push(perfectCircle);
+
+            // Bright glowing ring around hit zone
+            const ringGeometry = new THREE.RingGeometry(1.8, 2.2, 32);
+            const ringMaterial = new THREE.MeshPhongMaterial({
+                color: 0x00ffff,
+                emissive: 0x006666,
+                transparent: true,
+                opacity: 1.0,
+                side: THREE.DoubleSide
+            });
+
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.position.set(laneX, -4.7, this.hitZoneCenter);
+            ring.rotateX(-Math.PI / 2);
+            this.scene.add(ring);
+
+            // Add extra bright border ring for visibility
+            const borderRingGeometry = new THREE.RingGeometry(2.2, 2.4, 32);
+            const borderRingMaterial = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                emissive: 0x888888,
+                transparent: true,
+                opacity: 0.8,
+                side: THREE.DoubleSide
+            });
+
+            const borderRing = new THREE.Mesh(borderRingGeometry, borderRingMaterial);
+            borderRing.position.set(laneX, -4.6, this.hitZoneCenter);
+            borderRing.rotateX(-Math.PI / 2);
+            this.scene.add(borderRing);
+        });
     }
 
     createCube() {
         // Create cube geometry and material
         const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5);
+        const originalHue = Math.random();
         const material = new THREE.MeshPhongMaterial({
-            color: new THREE.Color().setHSL(Math.random(), 0.8, 0.7),
+            color: new THREE.Color().setHSL(originalHue, 0.8, 0.7),
             transparent: true,
             opacity: 0.95,
-            emissive: new THREE.Color().setHSL(Math.random(), 0.5, 0.1) // Add glow
+            emissive: new THREE.Color().setHSL(originalHue, 0.5, 0.1) // Add glow
         });
         
         const cube = new THREE.Mesh(geometry, material);
@@ -250,8 +256,9 @@ class TypeSaber {
         // No rotation for better text readability
         cube.rotation.set(0, 0, 0);
         
-        // Store lane info
+        // Store lane info and original color
         cube.userData.lane = laneIndex;
+        cube.userData.originalHue = originalHue;
         
         // Assign random letter
         cube.userData.letter = this.letterBank[Math.floor(Math.random() * this.letterBank.length)];
@@ -339,31 +346,39 @@ class TypeSaber {
     }
 
     checkLetterInput(pressedLetter) {
-        // Find the closest matching cube with the pressed letter IN THE HIT ZONE
+        // Find the closest matching cube with the pressed letter IN THE HIT CIRCLES
         let targetCube = null;
         let closestDistance = Infinity;
         let hitType = 'MISS';
         
         this.cubes.forEach(cube => {
             if (cube.userData.letter === pressedLetter) {
+                const cubeX = cube.position.x;
                 const cubeZ = cube.position.z;
                 
-                // Check if cube is in the hit zone
-                if (cubeZ >= this.hitZoneStart && cubeZ <= this.hitZoneEnd) {
-                    const distance = Math.abs(cubeZ - (this.hitZoneStart + this.hitZoneDepth / 2));
-                    if (distance < closestDistance) {
-                        closestDistance = distance;
-                        targetCube = cube;
-                        
-                        // Determine hit quality based on position in hit zone
-                        const centerZ = this.hitZoneStart + this.hitZoneDepth / 2;
-                        const distanceFromCenter = Math.abs(cubeZ - centerZ);
-                        const perfectZone = this.hitZoneDepth * 0.2; // 20% of hit zone is "perfect"
-                        
-                        if (distanceFromCenter <= perfectZone) {
-                            hitType = 'PERFECT';
-                        } else {
-                            hitType = 'HIT';
+                // Check if cube is near the hit zone Z position
+                const zDistance = Math.abs(cubeZ - this.hitZoneCenter);
+                if (zDistance <= this.hitZoneTolerance) {
+                    
+                    // Find which lane this cube is in
+                    const laneIndex = cube.userData.lane;
+                    const laneX = this.lanes[laneIndex];
+                    
+                    // Check if cube is within the circular hit zone for its lane
+                    const xDistance = Math.abs(cubeX - laneX);
+                    const distanceFromLaneCenter = Math.sqrt(xDistance * xDistance + zDistance * zDistance);
+                    
+                    if (distanceFromLaneCenter <= this.hitZoneRadius) {
+                        if (distanceFromLaneCenter < closestDistance) {
+                            closestDistance = distanceFromLaneCenter;
+                            targetCube = cube;
+                            
+                            // Determine hit quality based on distance from perfect center
+                            if (distanceFromLaneCenter <= this.perfectZoneRadius) {
+                                hitType = 'PERFECT';
+                            } else {
+                                hitType = 'HIT';
+                            }
                         }
                     }
                 }
@@ -390,16 +405,16 @@ class TypeSaber {
             
             // Clear the hit message after a short delay
             setTimeout(() => {
-                this.updateInputDisplay('Hit cubes in the zone!');
+                this.updateInputDisplay('Hit cubes in the circles!');
             }, 800);
         } else {
-            // Check if there was a matching cube but outside hit zone
+            // Check if there was a matching cube but outside hit circles
             const anyMatchingCube = this.cubes.find(cube => cube.userData.letter === pressedLetter);
             
             if (anyMatchingCube) {
                 this.score = Math.max(0, this.score - 2);
                 this.updateScore();
-                this.updateInputDisplay(`${pressedLetter} - TOO EARLY/LATE! -2`);
+                this.updateInputDisplay(`${pressedLetter} - OUTSIDE CIRCLE! -2`);
             } else {
                 this.score = Math.max(0, this.score - 2);
                 this.updateScore();
@@ -408,12 +423,12 @@ class TypeSaber {
             
             // Clear the miss message after a short delay
             setTimeout(() => {
-                this.updateInputDisplay('Hit cubes in the zone!');
+                this.updateInputDisplay('Hit cubes in the circles!');
             }, 800);
         }
     }
 
-    updateInputDisplay(message = 'Hit cubes in the zone!') {
+    updateInputDisplay(message = 'Hit cubes in the circles!') {
         const inputDisplay = document.getElementById('inputDisplay');
         inputDisplay.textContent = message;
     }
@@ -495,6 +510,20 @@ class TypeSaber {
         this.cubes.forEach(cube => {
             // Move cubes toward camera at consistent speed
             cube.position.z += this.cubeSpeed;
+            
+            // Check if cube is in hit zone and change color accordingly
+            const cubeZ = cube.position.z;
+            const zDistance = Math.abs(cubeZ - this.hitZoneCenter);
+            
+            if (zDistance <= this.hitZoneTolerance) {
+                // Cube is in hit zone - turn it red
+                cube.material.color.setHex(0xff0000);
+                cube.material.emissive.setHex(0x660000);
+            } else {
+                // Cube is outside hit zone - use original color
+                cube.material.color.setHSL(Math.random() * 0.1 + cube.userData.originalHue, 0.8, 0.6);
+                cube.material.emissive.setHex(0x000000);
+            }
             
             // Remove cubes that are too close (player missed them)
             if (cube.position.z > this.destroyDistance) {
