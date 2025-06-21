@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Type Saber - 3D Typing Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #canvas {
+            display: block;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            font-size: 18px;
+        }
+
+        #score {
+            color: #00ff00;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        #currentWord {
+            color: #ffff00;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        #inputDisplay {
+            color: #00ffff;
+            font-size: 20px;
+            border: 2px solid #00ffff;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 5px;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        #instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 101;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid #00ff00;
+        }
+
+        #instructions h2 {
+            color: #00ff00;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        #instructions p {
+            margin-bottom: 15px;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        #startButton {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        #startButton:hover {
+            background: #00cc00;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="canvas"></canvas>
+        
+        <div id="ui" class="hidden">
+            <div id="score">Score: 0</div>
+            <div id="currentWord">Target: -</div>
+            <div id="inputDisplay">Type here...</div>
+        </div>
+
+        <div id="instructions">
+            <h2>TYPE SABER</h2>
+            <p>Destroy the cubes by typing the words that appear above them!</p>
+            <p>• Type the complete word to destroy a cube</p>
+            <p>• Each destroyed cube gives you points</p>
+            <p>• Don't let too many cubes accumulate!</p>
+            <button id="startButton">START GAME</button>
+        </div>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+</body>
+</html>

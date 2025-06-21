@@ -1,0 +1,17 @@
+{
+  "name": "type-saber",
+  "version": "1.0.0",
+  "description": "A Three.js typing game where players destroy 3D cubes by typing words",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "three": "^0.160.0"
+  }
+}
