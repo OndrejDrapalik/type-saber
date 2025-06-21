@@ -16,15 +16,8 @@ class TypeSaber {
         this.destroyDistance = 12;
         this.lanes = [-6, -2, 2, 6]; // 4 lanes for cubes to travel in
         
-        // Word bank for the game
-        this.wordBank = [
-            'FIRE', 'WATER', 'EARTH', 'AIR', 'LIGHT', 'DARK',
-            'SWORD', 'MAGIC', 'POWER', 'SPEED', 'FORCE', 'ENERGY',
-            'CRYSTAL', 'DIAMOND', 'GOLD', 'SILVER', 'COPPER', 'IRON',
-            'THUNDER', 'LIGHTNING', 'STORM', 'WIND', 'RAIN', 'SNOW',
-            'DRAGON', 'PHOENIX', 'TIGER', 'WOLF', 'EAGLE', 'LION',
-            'NINJA', 'SAMURAI', 'WARRIOR', 'MAGE', 'ARCHER', 'KNIGHT'
-        ];
+        // Letter bank for the game (home row keys)
+        this.letterBank = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
         
         this.init();
         this.setupEventListeners();
@@ -184,12 +177,12 @@ class TypeSaber {
         // Store lane info
         cube.userData.lane = laneIndex;
         
-        // Assign random word
-        cube.userData.word = this.wordBank[Math.floor(Math.random() * this.wordBank.length)];
-        cube.userData.targetWord = cube.userData.word;
+        // Assign random letter
+        cube.userData.letter = this.letterBank[Math.floor(Math.random() * this.letterBank.length)];
+        cube.userData.targetLetter = cube.userData.letter;
         
-        // Create text sprite for the word
-        cube.userData.textSprite = this.createTextSprite(cube.userData.word);
+        // Create text sprite for the letter
+        cube.userData.textSprite = this.createTextSprite(cube.userData.letter);
         cube.add(cube.userData.textSprite);
         cube.userData.textSprite.position.set(0, 3.5, 0);
         
@@ -241,16 +234,10 @@ class TypeSaber {
         document.addEventListener('keydown', (event) => {
             if (!this.gameStarted) return;
             
-            if (event.key === 'Backspace') {
-                this.currentInput = this.currentInput.slice(0, -1);
-            } else if (event.key === 'Enter') {
-                this.checkInput();
-            } else if (event.key.length === 1 && /[a-zA-Z]/.test(event.key)) {
-                this.currentInput += event.key.toUpperCase();
+            if (event.key.length === 1 && /[a-zA-Z]/.test(event.key)) {
+                const pressedLetter = event.key.toUpperCase();
+                this.checkLetterInput(pressedLetter);
             }
-            
-            this.updateInputDisplay();
-            this.checkInput();
         });
     }
 
@@ -275,36 +262,47 @@ class TypeSaber {
         }, 3000);
     }
 
-    updateInputDisplay() {
-        const inputDisplay = document.getElementById('inputDisplay');
-        inputDisplay.textContent = this.currentInput || 'Type here...';
+    checkLetterInput(pressedLetter) {
+        // Find the closest matching cube with the pressed letter
+        let targetCube = null;
+        let closestDistance = Infinity;
         
-        // Highlight matching cubes
         this.cubes.forEach(cube => {
-            if (cube.userData.word.startsWith(this.currentInput) && this.currentInput.length > 0) {
-                cube.material.color.setHex(0x00ff00);
-                cube.material.emissive.setHex(0x004400);
-            } else {
-                cube.material.color.setHSL(Math.random(), 0.8, 0.6);
-                cube.material.emissive.setHex(0x000000);
+            if (cube.userData.letter === pressedLetter) {
+                const distance = Math.abs(cube.position.z);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    targetCube = cube;
+                }
             }
         });
-    }
-
-    checkInput() {
-        if (this.currentInput.length === 0) return;
         
-        // Find matching cube
-        const matchingCube = this.cubes.find(cube => 
-            cube.userData.word === this.currentInput
-        );
-        
-        if (matchingCube) {
-            this.destroyCube(matchingCube);
-            this.currentInput = '';
+        if (targetCube) {
+            this.destroyCube(targetCube);
             this.score += 10;
             this.updateScore();
+            this.updateInputDisplay(`${pressedLetter} - HIT!`);
+            
+            // Clear the hit message after a short delay
+            setTimeout(() => {
+                this.updateInputDisplay('Press matching letters...');
+            }, 500);
+        } else {
+            // Show miss feedback
+            this.score = Math.max(0, this.score - 2);
+            this.updateScore();
+            this.updateInputDisplay(`${pressedLetter} - MISS!`);
+            
+            // Clear the miss message after a short delay
+            setTimeout(() => {
+                this.updateInputDisplay('Press matching letters...');
+            }, 500);
         }
+    }
+
+    updateInputDisplay(message = 'Press matching letters...') {
+        const inputDisplay = document.getElementById('inputDisplay');
+        inputDisplay.textContent = message;
     }
 
     destroyCube(cube) {
@@ -394,24 +392,22 @@ class TypeSaber {
             }
         });
         
-        // Update current target word display (prioritize closest cube)
-        let targetCube = null;
+        // Update current target display (show closest cube letter)
+        let closestCube = null;
         let closestDistance = Infinity;
         
         this.cubes.forEach(cube => {
-            if (cube.userData.word.startsWith(this.currentInput) && this.currentInput.length > 0) {
-                const distance = cube.position.z;
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    targetCube = cube;
-                }
+            const distance = cube.position.z;
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestCube = cube;
             }
         });
         
-        if (targetCube) {
-            document.getElementById('currentWord').textContent = `Target: ${targetCube.userData.word}`;
+        if (closestCube) {
+            document.getElementById('currentWord').textContent = `Next: ${closestCube.userData.letter}`;
         } else {
-            document.getElementById('currentWord').textContent = 'Target: -';
+            document.getElementById('currentWord').textContent = 'Next: -';
         }
         
         this.renderer.render(this.scene, this.camera);
