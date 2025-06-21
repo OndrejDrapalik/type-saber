@@ -11,7 +11,7 @@ class TypeSaber {
         this.gameStarted = false;
         
         // Game settings
-        this.cubeSpeed = 0.12; // Faster movement for more challenge
+        this.cubeSpeed = 0.18; // Much faster movement for more challenge
         this.spawnDistance = -80; // Spawn much further away
         this.destroyDistance = 12;
         this.lanes = [-6, -2, 2, 6]; // 4 lanes for cubes to travel in
@@ -160,75 +160,8 @@ class TypeSaber {
     }
 
     createHitZone() {
-        this.hitZoneElements = {
-            circles: [],
-            perfectCircles: []
-        };
-
-        // Create circular hit zones for each lane on the ground
-        this.lanes.forEach((laneX, index) => {
-            // Main hit zone circle (larger, bright red)
-            const hitCircleGeometry = new THREE.CircleGeometry(1.8, 32);
-            const hitCircleMaterial = new THREE.MeshPhongMaterial({
-                color: 0xff0000,
-                emissive: 0x660000,
-                transparent: true,
-                opacity: 0.9,
-                side: THREE.DoubleSide
-            });
-
-            const hitCircle = new THREE.Mesh(hitCircleGeometry, hitCircleMaterial);
-            hitCircle.position.set(laneX, -4.9, this.hitZoneCenter); // Position at hit zone
-            hitCircle.rotateX(-Math.PI / 2);
-            this.scene.add(hitCircle);
-            this.hitZoneElements.circles.push(hitCircle);
-
-            // Perfect zone circle (smaller, bright yellow)
-            const perfectCircleGeometry = new THREE.CircleGeometry(0.8, 32);
-            const perfectCircleMaterial = new THREE.MeshPhongMaterial({
-                color: 0xffff00,
-                emissive: 0x888800,
-                transparent: true,
-                opacity: 1.0,
-                side: THREE.DoubleSide
-            });
-
-            const perfectCircle = new THREE.Mesh(perfectCircleGeometry, perfectCircleMaterial);
-            perfectCircle.position.set(laneX, -4.8, this.hitZoneCenter); // Slightly above hit circle
-            perfectCircle.rotateX(-Math.PI / 2);
-            this.scene.add(perfectCircle);
-            this.hitZoneElements.perfectCircles.push(perfectCircle);
-
-            // Bright glowing ring around hit zone
-            const ringGeometry = new THREE.RingGeometry(1.8, 2.2, 32);
-            const ringMaterial = new THREE.MeshPhongMaterial({
-                color: 0x00ffff,
-                emissive: 0x006666,
-                transparent: true,
-                opacity: 1.0,
-                side: THREE.DoubleSide
-            });
-
-            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-            ring.position.set(laneX, -4.7, this.hitZoneCenter);
-            ring.rotateX(-Math.PI / 2);
-            this.scene.add(ring);
-
-            // Add extra bright border ring for visibility
-            const borderRingGeometry = new THREE.RingGeometry(2.2, 2.4, 32);
-            const borderRingMaterial = new THREE.MeshPhongMaterial({
-                color: 0xffffff,
-                emissive: 0x888888,
-                transparent: true,
-                opacity: 0.8,
-                side: THREE.DoubleSide
-            });
-
-            const borderRing = new THREE.Mesh(borderRingGeometry, borderRingMaterial);
-            borderRing.position.set(laneX, -4.6, this.hitZoneCenter);
-            borderRing.rotateX(-Math.PI / 2);
-            this.scene.add(borderRing);
-        });
+        // Hit zone is now invisible - only the cube color change indicates when to hit
+        // This creates a cleaner visual experience focused on the cubes themselves
     }
 
     createCube() {
