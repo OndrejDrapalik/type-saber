@@ -10,6 +10,12 @@ class TypeSaber {
         this.score = 0;
         this.gameStarted = false;
         
+        // Game settings
+        this.cubeSpeed = 0.05; // Much slower movement
+        this.spawnDistance = -80; // Spawn much further away
+        this.destroyDistance = 12;
+        this.lanes = [-6, -2, 2, 6]; // 4 lanes for cubes to travel in
+        
         // Word bank for the game
         this.wordBank = [
             'FIRE', 'WATER', 'EARTH', 'AIR', 'LIGHT', 'DARK',
@@ -27,11 +33,11 @@ class TypeSaber {
     init() {
         // Create scene
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x000011);
+        this.scene.background = new THREE.Color(0x000511); // Darker blue background
 
         // Create camera
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(0, 0, 10);
+        this.camera.position.set(0, 2, 10);
 
         // Create renderer
         const canvas = document.getElementById('canvas');
@@ -39,68 +45,155 @@ class TypeSaber {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.fog = new THREE.Fog(0x000511, 30, 100);
 
         // Add lights
         this.setupLighting();
+        
+        // Create Beat Saber-style environment
+        this.createEnvironment();
 
         // Handle window resize
         window.addEventListener('resize', () => this.onWindowResize());
     }
 
     setupLighting() {
-        // Ambient light
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+        // Ambient light (dimmer for more dramatic effect)
+        const ambientLight = new THREE.AmbientLight(0x202040, 0.2);
         this.scene.add(ambientLight);
 
-        // Directional light
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(10, 10, 5);
+        // Main directional light (cooler tone)
+        const directionalLight = new THREE.DirectionalLight(0x8888ff, 0.6);
+        directionalLight.position.set(0, 10, 5);
         directionalLight.castShadow = true;
         directionalLight.shadow.mapSize.width = 2048;
         directionalLight.shadow.mapSize.height = 2048;
         this.scene.add(directionalLight);
 
-        // Point lights for atmosphere
-        const pointLight1 = new THREE.PointLight(0x00ff00, 0.5, 50);
-        pointLight1.position.set(-10, 5, 0);
-        this.scene.add(pointLight1);
+        // Neon accent lights (Beat Saber style)
+        const neonLight1 = new THREE.PointLight(0x00ffff, 1, 30);
+        neonLight1.position.set(-8, 3, -10);
+        this.scene.add(neonLight1);
 
-        const pointLight2 = new THREE.PointLight(0xff0000, 0.5, 50);
-        pointLight2.position.set(10, -5, 0);
-        this.scene.add(pointLight2);
+        const neonLight2 = new THREE.PointLight(0xff0080, 1, 30);
+        neonLight2.position.set(8, 3, -10);
+        this.scene.add(neonLight2);
+
+        // Side strip lights
+        const stripLight1 = new THREE.PointLight(0x0080ff, 0.8, 50);
+        stripLight1.position.set(-15, 0, 0);
+        this.scene.add(stripLight1);
+
+        const stripLight2 = new THREE.PointLight(0xff4000, 0.8, 50);
+        stripLight2.position.set(15, 0, 0);
+        this.scene.add(stripLight2);
+    }
+
+    createEnvironment() {
+        // Create a grid floor/platform like Beat Saber
+        const gridSize = 100;
+        const divisions = 50;
+        
+        // Create grid helper
+        const gridHelper = new THREE.GridHelper(gridSize, divisions, 0x00ffff, 0x004455);
+        gridHelper.position.y = -5;
+        this.scene.add(gridHelper);
+        
+        // Create side platforms
+        const platformGeometry = new THREE.BoxGeometry(4, 0.5, 200);
+        const platformMaterial = new THREE.MeshPhongMaterial({
+            color: 0x001122,
+            emissive: 0x002244,
+            transparent: true,
+            opacity: 0.8
+        });
+        
+        const leftPlatform = new THREE.Mesh(platformGeometry, platformMaterial);
+        leftPlatform.position.set(-12, -4, -50);
+        this.scene.add(leftPlatform);
+        
+        const rightPlatform = new THREE.Mesh(platformGeometry, platformMaterial);
+        rightPlatform.position.set(12, -4, -50);
+        this.scene.add(rightPlatform);
+        
+        // Create lane dividers/guides
+        this.lanes.forEach((laneX, index) => {
+            const lineGeometry = new THREE.BoxGeometry(0.1, 0.1, 200);
+            const lineMaterial = new THREE.MeshPhongMaterial({
+                color: 0x00ffff,
+                emissive: 0x004488,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            const laneLine = new THREE.Mesh(lineGeometry, lineMaterial);
+            laneLine.position.set(laneX, -3, -50);
+            this.scene.add(laneLine);
+        });
+        
+        // Add some background particles/stars
+        this.createStarField();
+    }
+
+    createStarField() {
+        const starGeometry = new THREE.BufferGeometry();
+        const starMaterial = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 0.5,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        const starVertices = [];
+        for (let i = 0; i < 1000; i++) {
+            const x = (Math.random() - 0.5) * 400;
+            const y = (Math.random() - 0.5) * 200;
+            const z = -Math.random() * 300 - 50;
+            starVertices.push(x, y, z);
+        }
+
+        starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+        const stars = new THREE.Points(starGeometry, starMaterial);
+        this.scene.add(stars);
     }
 
     createCube() {
         // Create cube geometry and material
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5);
         const material = new THREE.MeshPhongMaterial({
-            color: new THREE.Color().setHSL(Math.random(), 0.8, 0.6),
+            color: new THREE.Color().setHSL(Math.random(), 0.8, 0.7),
             transparent: true,
-            opacity: 0.9
+            opacity: 0.95,
+            emissive: new THREE.Color().setHSL(Math.random(), 0.5, 0.1) // Add glow
         });
         
         const cube = new THREE.Mesh(geometry, material);
         
-        // Position cube randomly
+        // Position cube in a lane far away
+        const laneIndex = Math.floor(Math.random() * this.lanes.length);
+        const lane = this.lanes[laneIndex];
         cube.position.set(
-            (Math.random() - 0.5) * 20,
-            (Math.random() - 0.5) * 10,
-            (Math.random() - 0.5) * 10
+            lane, // X position in predetermined lane
+            (Math.random() - 0.5) * 6, // Y position with some variation
+            this.spawnDistance // Z position far away
         );
         
-        // Add rotation
+        // Add subtle rotation
         cube.rotation.set(
-            Math.random() * Math.PI,
-            Math.random() * Math.PI,
-            Math.random() * Math.PI
+            Math.random() * Math.PI * 0.2,
+            Math.random() * Math.PI * 0.2,
+            Math.random() * Math.PI * 0.2
         );
         
-        // Add rotation speed
+        // Add rotation speed (slower for better readability)
         cube.userData.rotationSpeed = {
-            x: (Math.random() - 0.5) * 0.02,
-            y: (Math.random() - 0.5) * 0.02,
-            z: (Math.random() - 0.5) * 0.02
+            x: (Math.random() - 0.5) * 0.01,
+            y: (Math.random() - 0.5) * 0.01,
+            z: (Math.random() - 0.5) * 0.01
         };
+        
+        // Store lane info
+        cube.userData.lane = laneIndex;
         
         // Assign random word
         cube.userData.word = this.wordBank[Math.floor(Math.random() * this.wordBank.length)];
@@ -109,7 +202,7 @@ class TypeSaber {
         // Create text sprite for the word
         cube.userData.textSprite = this.createTextSprite(cube.userData.word);
         cube.add(cube.userData.textSprite);
-        cube.userData.textSprite.position.set(0, 2, 0);
+        cube.userData.textSprite.position.set(0, 3.5, 0);
         
         cube.castShadow = true;
         cube.receiveShadow = true;
@@ -123,22 +216,30 @@ class TypeSaber {
     createTextSprite(text) {
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
-        canvas.width = 256;
-        canvas.height = 64;
+        canvas.width = 512;
+        canvas.height = 128;
         
         context.fillStyle = 'rgba(0, 0, 0, 0)';
         context.fillRect(0, 0, canvas.width, canvas.height);
         
-        context.font = 'Bold 24px Arial';
-        context.fillStyle = '#ffffff';
+        // Add text stroke for better visibility
+        context.font = 'Bold 48px Arial';
+        context.strokeStyle = '#000000';
+        context.lineWidth = 4;
         context.textAlign = 'center';
         context.textBaseline = 'middle';
+        context.strokeText(text, canvas.width / 2, canvas.height / 2);
+        
+        context.fillStyle = '#ffffff';
         context.fillText(text, canvas.width / 2, canvas.height / 2);
         
         const texture = new THREE.CanvasTexture(canvas);
-        const material = new THREE.SpriteMaterial({ map: texture });
+        const material = new THREE.SpriteMaterial({ 
+            map: texture,
+            alphaTest: 0.1
+        });
         const sprite = new THREE.Sprite(material);
-        sprite.scale.set(2, 0.5, 1);
+        sprite.scale.set(4, 1, 1); // Much larger text
         
         return sprite;
     }
@@ -169,20 +270,20 @@ class TypeSaber {
         document.getElementById('instructions').classList.add('hidden');
         document.getElementById('ui').classList.remove('hidden');
         
-        // Create initial cubes
-        for (let i = 0; i < 5; i++) {
-            setTimeout(() => this.createCube(), i * 1000);
+        // Create initial cubes with staggered timing
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => this.createCube(), i * 2000);
         }
         
         // Start game loop
         this.animate();
         
-        // Spawn new cubes periodically
+        // Spawn new cubes periodically (slower spawning for better pacing)
         this.spawnInterval = setInterval(() => {
-            if (this.cubes.length < 8) {
+            if (this.cubes.length < 4) {
                 this.createCube();
             }
-        }, 3000);
+        }, 4000);
     }
 
     updateInputDisplay() {
@@ -290,25 +391,38 @@ class TypeSaber {
         
         requestAnimationFrame(() => this.animate());
         
-        // Rotate cubes
+        // Animate cubes moving toward player
         this.cubes.forEach(cube => {
+            // Rotate cubes
             cube.rotation.x += cube.userData.rotationSpeed.x;
             cube.rotation.y += cube.userData.rotationSpeed.y;
             cube.rotation.z += cube.userData.rotationSpeed.z;
             
-            // Make cubes slowly move toward camera
-            cube.position.z += 0.01;
+            // Move cubes toward camera at consistent speed
+            cube.position.z += this.cubeSpeed;
             
-            // Remove cubes that are too close
-            if (cube.position.z > 15) {
+            // Remove cubes that are too close (player missed them)
+            if (cube.position.z > this.destroyDistance) {
                 this.destroyCube(cube);
+                // Optional: subtract points for missed cubes
+                this.score = Math.max(0, this.score - 5);
+                this.updateScore();
             }
         });
         
-        // Update current target word display
-        const targetCube = this.cubes.find(cube => 
-            cube.userData.word.startsWith(this.currentInput) && this.currentInput.length > 0
-        );
+        // Update current target word display (prioritize closest cube)
+        let targetCube = null;
+        let closestDistance = Infinity;
+        
+        this.cubes.forEach(cube => {
+            if (cube.userData.word.startsWith(this.currentInput) && this.currentInput.length > 0) {
+                const distance = cube.position.z;
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    targetCube = cube;
+                }
+            }
+        });
         
         if (targetCube) {
             document.getElementById('currentWord').textContent = `Target: ${targetCube.userData.word}`;
