@@ -16,6 +16,11 @@ class TypeSaber {
         this.destroyDistance = 12;
         this.lanes = [-6, -2, 2, 6]; // 4 lanes for cubes to travel in
         
+        // Hit zone settings
+        this.hitZoneStart = 6; // Z position where hit zone starts
+        this.hitZoneEnd = 10; // Z position where hit zone ends
+        this.hitZoneDepth = this.hitZoneEnd - this.hitZoneStart;
+        
         // Letter bank for the game (home row keys)
         this.letterBank = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
         
@@ -126,6 +131,9 @@ class TypeSaber {
         
         // Add some background particles/stars
         this.createStarField();
+        
+        // Create hit zone visual indicators
+        this.createHitZone();
     }
 
     createStarField() {
@@ -148,6 +156,74 @@ class TypeSaber {
         starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
         const stars = new THREE.Points(starGeometry, starMaterial);
         this.scene.add(stars);
+    }
+
+    createHitZone() {
+        // Create bright hit zone on the ground
+        const hitZoneGeometry = new THREE.PlaneGeometry(20, this.hitZoneDepth);
+        const hitZoneMaterial = new THREE.MeshPhongMaterial({
+            color: 0x00ff88,
+            emissive: 0x004422,
+            transparent: true,
+            opacity: 0.6,
+            side: THREE.DoubleSide
+        });
+
+        const hitZoneFloor = new THREE.Mesh(hitZoneGeometry, hitZoneMaterial);
+        hitZoneFloor.position.set(0, -4.9, (this.hitZoneStart + this.hitZoneEnd) / 2);
+        hitZoneFloor.rotateX(-Math.PI / 2);
+        this.scene.add(hitZoneFloor);
+
+        // Create "PERFECT" zone in the center (smaller, brighter)
+        const perfectZoneGeometry = new THREE.PlaneGeometry(20, this.hitZoneDepth * 0.4);
+        const perfectZoneMaterial = new THREE.MeshPhongMaterial({
+            color: 0xffff00,
+            emissive: 0x444400,
+            transparent: true,
+            opacity: 0.8,
+            side: THREE.DoubleSide
+        });
+
+        const perfectZoneFloor = new THREE.Mesh(perfectZoneGeometry, perfectZoneMaterial);
+        perfectZoneFloor.position.set(0, -4.8, (this.hitZoneStart + this.hitZoneEnd) / 2);
+        perfectZoneFloor.rotateX(-Math.PI / 2);
+        this.scene.add(perfectZoneFloor);
+
+        // Add glowing border lines for the hit zone
+        const borderMaterial = new THREE.MeshPhongMaterial({
+            color: 0x00ffff,
+            emissive: 0x008888,
+            transparent: true,
+            opacity: 0.9
+        });
+
+        // Front border line
+        const frontBorderGeometry = new THREE.BoxGeometry(20, 0.2, 0.3);
+        const frontBorder = new THREE.Mesh(frontBorderGeometry, borderMaterial);
+        frontBorder.position.set(0, -4.5, this.hitZoneStart);
+        this.scene.add(frontBorder);
+
+        // Back border line
+        const backBorder = new THREE.Mesh(frontBorderGeometry, borderMaterial);
+        backBorder.position.set(0, -4.5, this.hitZoneEnd);
+        this.scene.add(backBorder);
+
+        // Side border lines
+        const sideBorderGeometry = new THREE.BoxGeometry(0.3, 0.2, this.hitZoneDepth);
+        const leftBorder = new THREE.Mesh(sideBorderGeometry, borderMaterial);
+        leftBorder.position.set(-10, -4.5, (this.hitZoneStart + this.hitZoneEnd) / 2);
+        this.scene.add(leftBorder);
+
+        const rightBorder = new THREE.Mesh(sideBorderGeometry, borderMaterial);
+        rightBorder.position.set(10, -4.5, (this.hitZoneStart + this.hitZoneEnd) / 2);
+        this.scene.add(rightBorder);
+
+        // Store references for potential animation
+        this.hitZoneElements = {
+            floor: hitZoneFloor,
+            perfectZone: perfectZoneFloor,
+            borders: [frontBorder, backBorder, leftBorder, rightBorder]
+        };
     }
 
     createCube() {
@@ -263,44 +339,81 @@ class TypeSaber {
     }
 
     checkLetterInput(pressedLetter) {
-        // Find the closest matching cube with the pressed letter
+        // Find the closest matching cube with the pressed letter IN THE HIT ZONE
         let targetCube = null;
         let closestDistance = Infinity;
+        let hitType = 'MISS';
         
         this.cubes.forEach(cube => {
             if (cube.userData.letter === pressedLetter) {
-                const distance = Math.abs(cube.position.z);
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    targetCube = cube;
+                const cubeZ = cube.position.z;
+                
+                // Check if cube is in the hit zone
+                if (cubeZ >= this.hitZoneStart && cubeZ <= this.hitZoneEnd) {
+                    const distance = Math.abs(cubeZ - (this.hitZoneStart + this.hitZoneDepth / 2));
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        targetCube = cube;
+                        
+                        // Determine hit quality based on position in hit zone
+                        const centerZ = this.hitZoneStart + this.hitZoneDepth / 2;
+                        const distanceFromCenter = Math.abs(cubeZ - centerZ);
+                        const perfectZone = this.hitZoneDepth * 0.2; // 20% of hit zone is "perfect"
+                        
+                        if (distanceFromCenter <= perfectZone) {
+                            hitType = 'PERFECT';
+                        } else {
+                            hitType = 'HIT';
+                        }
+                    }
                 }
             }
         });
         
         if (targetCube) {
             this.destroyCube(targetCube);
-            this.score += 10;
+            
+            // Score based on hit quality
+            let points = 0;
+            switch (hitType) {
+                case 'PERFECT':
+                    points = 20;
+                    break;
+                case 'HIT':
+                    points = 10;
+                    break;
+            }
+            
+            this.score += points;
             this.updateScore();
-            this.updateInputDisplay(`${pressedLetter} - HIT!`);
+            this.updateInputDisplay(`${pressedLetter} - ${hitType}! +${points}`);
             
             // Clear the hit message after a short delay
             setTimeout(() => {
-                this.updateInputDisplay('Press matching letters...');
-            }, 500);
+                this.updateInputDisplay('Hit cubes in the zone!');
+            }, 800);
         } else {
-            // Show miss feedback
-            this.score = Math.max(0, this.score - 2);
-            this.updateScore();
-            this.updateInputDisplay(`${pressedLetter} - MISS!`);
+            // Check if there was a matching cube but outside hit zone
+            const anyMatchingCube = this.cubes.find(cube => cube.userData.letter === pressedLetter);
+            
+            if (anyMatchingCube) {
+                this.score = Math.max(0, this.score - 2);
+                this.updateScore();
+                this.updateInputDisplay(`${pressedLetter} - TOO EARLY/LATE! -2`);
+            } else {
+                this.score = Math.max(0, this.score - 2);
+                this.updateScore();
+                this.updateInputDisplay(`${pressedLetter} - NO TARGET! -2`);
+            }
             
             // Clear the miss message after a short delay
             setTimeout(() => {
-                this.updateInputDisplay('Press matching letters...');
-            }, 500);
+                this.updateInputDisplay('Hit cubes in the zone!');
+            }, 800);
         }
     }
 
-    updateInputDisplay(message = 'Press matching letters...') {
+    updateInputDisplay(message = 'Hit cubes in the zone!') {
         const inputDisplay = document.getElementById('inputDisplay');
         inputDisplay.textContent = message;
     }
