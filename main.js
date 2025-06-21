@@ -11,16 +11,16 @@ class TypeSaber {
         this.gameStarted = false;
         
         // Game settings
-        this.cubeSpeed = 0.18; // Much faster movement for more challenge
+        this.cubeSpeed = 0.5; // Extremely fast movement for intense challenge
         this.spawnDistance = -80; // Spawn much further away
         this.destroyDistance = 12;
         this.lanes = [-6, -2, 2, 6]; // 4 lanes for cubes to travel in
         
         // Hit zone settings
         this.hitZoneCenter = -2; // Z position of hit circles (further into the field)
-        this.hitZoneRadius = 1.8; // Radius of hit circles
-        this.perfectZoneRadius = 0.8; // Radius of perfect zone
-        this.hitZoneTolerance = 4; // Larger tolerance so cubes turn red earlier
+        this.hitZoneRadius = 3.0; // Larger radius of hit circles
+        this.perfectZoneRadius = 1.2; // Larger radius of perfect zone
+        this.hitZoneTolerance = 6; // Much larger tolerance so cubes turn red earlier
         
         // Letter bank for the game (home row keys)
         this.letterBank = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
@@ -445,16 +445,30 @@ class TypeSaber {
             cube.position.z += this.cubeSpeed;
             
             // Check if cube is in hit zone and change color accordingly
+            const cubeX = cube.position.x;
             const cubeZ = cube.position.z;
             const zDistance = Math.abs(cubeZ - this.hitZoneCenter);
             
+            // Only turn red if cube is in the actual hit zone for its lane
             if (zDistance <= this.hitZoneTolerance) {
-                // Cube is in hit zone - turn it red
-                cube.material.color.setHex(0xff0000);
-                cube.material.emissive.setHex(0x660000);
+                const laneIndex = cube.userData.lane;
+                const laneX = this.lanes[laneIndex];
+                const xDistance = Math.abs(cubeX - laneX);
+                const distanceFromLaneCenter = Math.sqrt(xDistance * xDistance + zDistance * zDistance);
+                
+                // Only turn red if within the circular hit zone radius
+                if (distanceFromLaneCenter <= this.hitZoneRadius) {
+                    // Cube is in hit zone - turn it red
+                    cube.material.color.setHex(0xff0000);
+                    cube.material.emissive.setHex(0x660000);
+                } else {
+                    // Cube is outside hit zone - use original color
+                    cube.material.color.setHSL(cube.userData.originalHue, 0.8, 0.6);
+                    cube.material.emissive.setHex(0x000000);
+                }
             } else {
                 // Cube is outside hit zone - use original color
-                cube.material.color.setHSL(Math.random() * 0.1 + cube.userData.originalHue, 0.8, 0.6);
+                cube.material.color.setHSL(cube.userData.originalHue, 0.8, 0.6);
                 cube.material.emissive.setHex(0x000000);
             }
             
