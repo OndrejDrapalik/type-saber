@@ -11,7 +11,7 @@ class TypeSaber {
         this.gameStarted = false;
         
         // Game settings
-        this.cubeSpeed = 0.05; // Much slower movement
+        this.cubeSpeed = 0.12; // Faster movement for more challenge
         this.spawnDistance = -80; // Spawn much further away
         this.destroyDistance = 12;
         this.lanes = [-6, -2, 2, 6]; // 4 lanes for cubes to travel in
@@ -178,19 +178,8 @@ class TypeSaber {
             this.spawnDistance // Z position far away
         );
         
-        // Add subtle rotation
-        cube.rotation.set(
-            Math.random() * Math.PI * 0.2,
-            Math.random() * Math.PI * 0.2,
-            Math.random() * Math.PI * 0.2
-        );
-        
-        // Add rotation speed (slower for better readability)
-        cube.userData.rotationSpeed = {
-            x: (Math.random() - 0.5) * 0.01,
-            y: (Math.random() - 0.5) * 0.01,
-            z: (Math.random() - 0.5) * 0.01
-        };
+        // No rotation for better text readability
+        cube.rotation.set(0, 0, 0);
         
         // Store lane info
         cube.userData.lane = laneIndex;
@@ -278,12 +267,12 @@ class TypeSaber {
         // Start game loop
         this.animate();
         
-        // Spawn new cubes periodically (slower spawning for better pacing)
+        // Spawn new cubes periodically
         this.spawnInterval = setInterval(() => {
-            if (this.cubes.length < 4) {
+            if (this.cubes.length < 5) {
                 this.createCube();
             }
-        }, 4000);
+        }, 3000);
     }
 
     updateInputDisplay() {
@@ -393,11 +382,6 @@ class TypeSaber {
         
         // Animate cubes moving toward player
         this.cubes.forEach(cube => {
-            // Rotate cubes
-            cube.rotation.x += cube.userData.rotationSpeed.x;
-            cube.rotation.y += cube.userData.rotationSpeed.y;
-            cube.rotation.z += cube.userData.rotationSpeed.z;
-            
             // Move cubes toward camera at consistent speed
             cube.position.z += this.cubeSpeed;
             
